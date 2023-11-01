@@ -15,6 +15,10 @@ class Path:
                 return object.__new__(LocalPath)
             elif str(path).startswith("gs://"):
                 return object.__new__(GSPath)
+            elif str(path).startswith("s3://"):
+                return object.__new__(S3Path)
+            elif str(path).startswith("azure://"):
+                return object.__new__(AzurePath)
         return object.__new__(cls)
 
     def __init__(self, path: Union[Text, "URL"], **kwargs):
@@ -37,4 +41,12 @@ class LocalPath(Path):
 
 
 class GSPath(Path):
+    pass
+
+
+class S3Path(Path):
+    pass
+
+
+class AzurePath(Path):
     pass
