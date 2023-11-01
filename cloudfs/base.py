@@ -35,6 +35,66 @@ class Path:
     def __repr__(self):
         return self.__str__()
 
+    def __eq__(self, other_path: "Path") -> bool:
+        raise NotImplementedError
+
+    def samefile(self, other_path):
+        raise NotImplementedError
+
+    def glob(self, pattern):
+        raise NotImplementedError
+
+    def stat(self, *, follow_symlinks=True):
+        raise NotImplementedError
+
+    def owner(self):
+        raise NotImplementedError
+
+    def group(self):
+        raise NotImplementedError
+
+    def open(self, **kwargs):
+        raise NotImplementedError
+
+    def read_bytes(self):
+        raise NotImplementedError
+
+    def read_text(self, encoding=None, errors=None):
+        raise NotImplementedError
+
+    def write_bytes(self, data):
+        raise NotImplementedError
+
+    def write_text(self, data, encoding=None, errors=None, newline=None):
+        raise NotImplementedError
+
+    def touch(self, mode=0o666, exist_ok=True):
+        raise NotImplementedError
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        raise NotImplementedError
+
+    def unlink(self, missing_ok=False):
+        raise NotImplementedError
+
+    def rmdir(self):
+        raise NotImplementedError
+
+    def rename(self, target):
+        raise NotImplementedError
+
+    def replace(self, target):
+        raise NotImplementedError
+
+    def exists(self):
+        raise NotImplementedError
+
+    def is_dir(self):
+        raise NotImplementedError
+
+    def is_file(self):
+        raise NotImplementedError
+
 
 class LocalPath(Path):
     pass
