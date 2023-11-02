@@ -1,3 +1,4 @@
+from pathlib import Path as _Path
 from typing import Text, Type, Union
 
 from yarl import URL
@@ -38,7 +39,7 @@ class Path:
     def __eq__(self, other_path: "Path") -> bool:
         raise NotImplementedError
 
-    def samefile(self, other_path):
+    def samefile(self, other_path) -> bool:
         raise NotImplementedError
 
     def glob(self, pattern):
@@ -97,7 +98,20 @@ class Path:
 
 
 class LocalPath(Path):
-    pass
+    def __init__(self, path: Union[Text, URL], **kwargs):
+        super().__init__(path, **kwargs)
+
+    def __eq__(self, other_path: "LocalPath") -> bool:
+        if not isinstance(other_path, LocalPath):
+            return False
+        return self._url == other_path._url
+
+    def samefile(self, other_path: "LocalPath") -> bool:
+        if not isinstance(other_path, LocalPath):
+            return False
+        self_ = _Path((self._url.host or "") + (self._url.path or ""))
+        other_ = _Path((other_path._url.host or "") + (other_path._url.path or ""))
+        return self_.samefile(other_)
 
 
 class GSPath(Path):
