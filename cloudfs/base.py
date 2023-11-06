@@ -1,3 +1,4 @@
+import io
 from pathlib import Path as _Path
 from typing import Dict, Generator, Optional, Text, Type, Union
 
@@ -47,55 +48,55 @@ class Path:
     ) -> Generator["Path", None, None]:
         raise NotImplementedError
 
-    def stat(self, *, follow_symlinks=True):
+    def stat(self, *, follow_symlinks=True) -> Dict[Text, Union[int, float]]:
         raise NotImplementedError
 
-    def owner(self):
+    def owner(self) -> Text:
         raise NotImplementedError
 
-    def group(self):
+    def group(self) -> Text:
         raise NotImplementedError
 
-    def open(self, **kwargs):
+    def open(self, **kwargs) -> io.IOBase:
         raise NotImplementedError
 
-    def read_bytes(self):
+    def read_bytes(self) -> bytes:
         raise NotImplementedError
 
-    def read_text(self, encoding=None, errors=None):
+    def read_text(self, encoding=None, errors=None) -> Text:
         raise NotImplementedError
 
-    def write_bytes(self, data):
+    def write_bytes(self, data) -> int:
         raise NotImplementedError
 
-    def write_text(self, data, encoding=None, errors=None, newline=None):
+    def write_text(self, data, encoding=None, errors=None, newline=None) -> int:
         raise NotImplementedError
 
-    def touch(self, mode=0o666, exist_ok=True):
+    def touch(self, mode=438, exist_ok=True) -> None:
         raise NotImplementedError
 
-    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+    def mkdir(self, mode=511, parents=False, exist_ok=False) -> None:
         raise NotImplementedError
 
-    def unlink(self, missing_ok=False):
+    def unlink(self, missing_ok=False) -> None:
         raise NotImplementedError
 
-    def rmdir(self):
+    def rmdir(self) -> None:
         raise NotImplementedError
 
-    def rename(self, target):
+    def rename(self, target) -> "Path":
         raise NotImplementedError
 
-    def replace(self, target):
+    def replace(self, target) -> "Path":
         raise NotImplementedError
 
-    def exists(self):
+    def exists(self) -> bool:
         raise NotImplementedError
 
-    def is_dir(self):
+    def is_dir(self) -> bool:
         raise NotImplementedError
 
-    def is_file(self):
+    def is_file(self) -> bool:
         raise NotImplementedError
 
 
@@ -108,23 +109,24 @@ class LocalPath(Path):
             return False
         return self._url == other_path._url
 
+    @property
+    def _path(self) -> _Path:
+        return _Path((self._url.host or "") + (self._url.path or ""))
+
     def samefile(self, other_path: "LocalPath") -> bool:
         if not isinstance(other_path, LocalPath):
             return False
-        self_ = _Path((self._url.host or "") + (self._url.path or ""))
         other_ = _Path((other_path._url.host or "") + (other_path._url.path or ""))
-        return self_.samefile(other_)
+        return self._path.samefile(other_)
 
     def glob(
         self, pattern: Text, *, case_sensitive: Optional[bool] = None
     ) -> Generator["LocalPath", None, None]:
-        _path = _Path((self._url.host or "") + (self._url.path or ""))
-        for i in _path.glob(pattern, case_sensitive=case_sensitive):
+        for i in self._path.glob(pattern, case_sensitive=case_sensitive):
             yield LocalPath(i.as_uri())
 
     def stat(self, *, follow_symlinks=True) -> Dict[Text, Union[int, float]]:
-        _path = _Path((self._url.host or "") + (self._url.path or ""))
-        stat_info = _path.stat(follow_symlinks=follow_symlinks)
+        stat_info = self.stat(follow_symlinks=follow_symlinks)
         stat_dict = {
             "st_mode": stat_info.st_mode,
             "st_ino": stat_info.st_ino,
@@ -139,58 +141,57 @@ class LocalPath(Path):
         }
         return stat_dict
 
-    def owner(self):
-        raise NotImplementedError
+    def owner(self) -> Text:
+        return self._path.owner()
 
-    def group(self):
-        raise NotImplementedError
+    def group(self) -> Text:
+        return self._path.group()
 
-    def open(self, **kwargs):
-        _path = _Path((self._url.host or "") + (self._url.path or ""))
-        return _path.open(**kwargs)
+    def open(self, **kwargs) -> io.IOBase:
+        return self._path.open(**kwargs)
 
     def read_bytes(self) -> bytes:
-        _path = _Path((self._url.host or "") + (self._url.path or ""))
-        return _path.read_bytes()
+        return self._path.read_bytes()
 
     def read_text(self, encoding=None, errors=None) -> Text:
-        _path = _Path((self._url.host or "") + (self._url.path or ""))
-        return _path.read_text(encoding=encoding, errors=errors)
+        return self._path.read_text(encoding=encoding, errors=errors)
 
     def write_bytes(self, data: bytes) -> int:
-        _path = _Path((self._url.host or "") + (self._url.path or ""))
-        return _path.write_bytes(data)
+        return self._path.write_bytes(data)
 
     def write_text(self, data, encoding=None, errors=None, newline=None) -> int:
-        _path = _Path((self._url.host or "") + (self._url.path or ""))
-        return _path.write_text(data, encoding=encoding, errors=errors, newline=newline)
+        return self._path.write_text(
+            data, encoding=encoding, errors=errors, newline=newline
+        )
 
-    def touch(self, mode=0o666, exist_ok=True):
-        raise NotImplementedError
+    def touch(self, mode=438, exist_ok=True) -> None:
+        self._path.touch(mode=mode, exist_ok=exist_ok)
 
-    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
-        raise NotImplementedError
+    def mkdir(self, mode=511, parents=False, exist_ok=False):
+        self._path.mkdir(mode=mode, parents=parents, exist_ok=exist_ok)
 
-    def unlink(self, missing_ok=False):
-        raise NotImplementedError
+    def unlink(self, missing_ok=False) -> None:
+        self._path.unlink(missing_ok=missing_ok)
 
-    def rmdir(self):
-        raise NotImplementedError
+    def rmdir(self) -> None:
+        self._path.rmdir()
 
-    def rename(self, target):
-        raise NotImplementedError
+    def rename(self, target) -> "LocalPath":
+        target_path = self._path.rename(target)
+        return LocalPath(target_path.as_uri())
 
     def replace(self, target):
-        raise NotImplementedError
+        target_path = self._path.replace(target)
+        return LocalPath(target_path.as_uri())
 
-    def exists(self):
-        raise NotImplementedError
+    def exists(self, follow_symlinks=True) -> bool:
+        return self._path.exists(follow_symlinks=follow_symlinks)
 
-    def is_dir(self):
-        raise NotImplementedError
+    def is_dir(self) -> bool:
+        return self._path.is_dir()
 
-    def is_file(self):
-        raise NotImplementedError
+    def is_file(self) -> bool:
+        return self._path.is_file()
 
 
 class GSPath(Path):
