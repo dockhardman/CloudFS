@@ -1,5 +1,5 @@
 from pathlib import Path as _Path
-from typing import Text, Type, Union
+from typing import Dict, Generator, Optional, Text, Type, Union
 
 from yarl import URL
 
@@ -42,7 +42,9 @@ class Path:
     def samefile(self, other_path) -> bool:
         raise NotImplementedError
 
-    def glob(self, pattern):
+    def glob(
+        self, pattern: Text, *, case_sensitive: Optional[bool] = None
+    ) -> Generator["Path", None, None]:
         raise NotImplementedError
 
     def stat(self, *, follow_symlinks=True):
@@ -112,6 +114,83 @@ class LocalPath(Path):
         self_ = _Path((self._url.host or "") + (self._url.path or ""))
         other_ = _Path((other_path._url.host or "") + (other_path._url.path or ""))
         return self_.samefile(other_)
+
+    def glob(
+        self, pattern: Text, *, case_sensitive: Optional[bool] = None
+    ) -> Generator["LocalPath", None, None]:
+        _path = _Path((self._url.host or "") + (self._url.path or ""))
+        for i in _path.glob(pattern, case_sensitive=case_sensitive):
+            yield LocalPath(i.as_uri())
+
+    def stat(self, *, follow_symlinks=True) -> Dict[Text, Union[int, float]]:
+        _path = _Path((self._url.host or "") + (self._url.path or ""))
+        stat_info = _path.stat(follow_symlinks=follow_symlinks)
+        stat_dict = {
+            "st_mode": stat_info.st_mode,
+            "st_ino": stat_info.st_ino,
+            "st_dev": stat_info.st_dev,
+            "st_nlink": stat_info.st_nlink,
+            "st_uid": stat_info.st_uid,
+            "st_gid": stat_info.st_gid,
+            "st_size": stat_info.st_size,
+            "st_atime": stat_info.st_atime,
+            "st_mtime": stat_info.st_mtime,
+            "st_ctime": stat_info.st_ctime,
+        }
+        return stat_dict
+
+    def owner(self):
+        raise NotImplementedError
+
+    def group(self):
+        raise NotImplementedError
+
+    def open(self, **kwargs):
+        _path = _Path((self._url.host or "") + (self._url.path or ""))
+        return _path.open(**kwargs)
+
+    def read_bytes(self) -> bytes:
+        _path = _Path((self._url.host or "") + (self._url.path or ""))
+        return _path.read_bytes()
+
+    def read_text(self, encoding=None, errors=None) -> Text:
+        _path = _Path((self._url.host or "") + (self._url.path or ""))
+        return _path.read_text(encoding=encoding, errors=errors)
+
+    def write_bytes(self, data: bytes) -> int:
+        _path = _Path((self._url.host or "") + (self._url.path or ""))
+        return _path.write_bytes(data)
+
+    def write_text(self, data, encoding=None, errors=None, newline=None) -> int:
+        _path = _Path((self._url.host or "") + (self._url.path or ""))
+        return _path.write_text(data, encoding=encoding, errors=errors, newline=newline)
+
+    def touch(self, mode=0o666, exist_ok=True):
+        raise NotImplementedError
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        raise NotImplementedError
+
+    def unlink(self, missing_ok=False):
+        raise NotImplementedError
+
+    def rmdir(self):
+        raise NotImplementedError
+
+    def rename(self, target):
+        raise NotImplementedError
+
+    def replace(self, target):
+        raise NotImplementedError
+
+    def exists(self):
+        raise NotImplementedError
+
+    def is_dir(self):
+        raise NotImplementedError
+
+    def is_file(self):
+        raise NotImplementedError
 
 
 class GSPath(Path):
