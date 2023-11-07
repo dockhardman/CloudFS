@@ -72,7 +72,7 @@ class Path:
     def write_bytes(self, data) -> int:
         raise NotImplementedError
 
-    def write_text(self, data, encoding=None, errors=None, newline=None) -> int:
+    def write_text(self, data, encoding=None, errors=None) -> int:
         raise NotImplementedError
 
     def touch(self, mode=438, exist_ok=True) -> None:
@@ -167,10 +167,8 @@ class LocalPath(Path):
     def write_bytes(self, data: bytes) -> int:
         return self._path.write_bytes(data)
 
-    def write_text(self, data, encoding=None, errors=None, newline=None) -> int:
-        return self._path.write_text(
-            data, encoding=encoding, errors=errors, newline=newline
-        )
+    def write_text(self, data, encoding=None, errors=None) -> int:
+        return self._path.write_text(data, encoding=encoding, errors=errors)
 
     def touch(self, mode=438, exist_ok=True) -> None:
         self._path.touch(mode=mode, exist_ok=exist_ok)

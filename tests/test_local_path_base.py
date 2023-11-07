@@ -32,3 +32,10 @@ def test_local_path_basic_operations(temp_dir: "pathlib.PosixPath"):
     bytes_filepath = path / bytes_filename
     assert bytes_filepath.write_bytes(data)
     assert bytes_filepath.read_bytes() == data
+
+    # test write_text and read_text
+    text_filename = "test_text"
+    data = "test"
+    text_filepath = path / text_filename
+    assert text_filepath.write_text(data)
+    assert text_filepath.read_text() == data
