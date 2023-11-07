@@ -40,6 +40,9 @@ class Path:
     def __eq__(self, other_path: "Path") -> bool:
         raise NotImplementedError
 
+    def __truediv__(self, name: Text) -> "Path":
+        raise NotImplementedError
+
     def samefile(self, other_path) -> bool:
         raise NotImplementedError
 
@@ -108,6 +111,11 @@ class LocalPath(Path):
         if not isinstance(other_path, LocalPath):
             return False
         return self._url == other_path._url
+
+    def __truediv__(self, name: Text) -> "LocalPath":
+        if not isinstance(name, Text):
+            raise ValueError(f"Expected str, got {type(name)}")
+        return LocalPath(self._url / name)
 
     @property
     def _path(self) -> _Path:
