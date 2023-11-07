@@ -184,8 +184,8 @@ class LocalPath(Path):
         target_path = self._path.replace(target)
         return LocalPath(target_path.as_uri())
 
-    def exists(self, follow_symlinks=True) -> bool:
-        return self._path.exists(follow_symlinks=follow_symlinks)
+    def exists(self) -> bool:
+        return self._path.exists()
 
     def is_dir(self) -> bool:
         return self._path.is_dir()
