@@ -26,6 +26,20 @@ def test_local_path_basic_operations(temp_dir: "pathlib.PosixPath"):
     assert path.samefile(LocalPath(temp_dir.as_uri()))
     assert not path.samefile(LocalPath("file:///tmp"))
 
+    # test create file
+    filename = "test_create_file"
+    filepath = path / filename
+    filepath.touch()
+    assert filepath.exists()
+    assert filepath.is_file()
+
+    # test create directory
+    dirname = "test_create_dir"
+    dirpath = path / dirname
+    dirpath.mkdir()
+    assert dirpath.exists()
+    assert dirpath.is_dir()
+
     # test write_bytes and read_bytes
     bytes_filename = "test_bytes"
     data = b"test"
