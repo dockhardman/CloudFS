@@ -40,6 +40,20 @@ def test_local_path_basic_operations(temp_dir: "pathlib.PosixPath"):
     assert dirpath.exists()
     assert dirpath.is_dir()
 
+    # test file stat
+    filename = "test_stat"
+    filepath = path / filename
+    filepath.touch()
+    assert filepath.stat()
+    assert filepath.owner()
+    assert filepath.group()
+    dirname = "test_stat_dir"
+    dirpath = path / dirname
+    dirpath.mkdir()
+    assert dirpath.stat()
+    assert dirpath.owner()
+    assert dirpath.group()
+
     # test write_bytes and read_bytes
     bytes_filename = "test_bytes"
     data = b"test"

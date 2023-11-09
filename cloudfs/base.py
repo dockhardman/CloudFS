@@ -51,7 +51,7 @@ class Path:
     ) -> Generator["Path", None, None]:
         raise NotImplementedError
 
-    def stat(self, *, follow_symlinks=True) -> Dict[Text, Union[int, float]]:
+    def stat(self) -> Dict[Text, Union[int, float]]:
         raise NotImplementedError
 
     def owner(self) -> Text:
@@ -133,8 +133,8 @@ class LocalPath(Path):
         for i in self._path.glob(pattern, case_sensitive=case_sensitive):
             yield LocalPath(i.as_uri())
 
-    def stat(self, *, follow_symlinks=True) -> Dict[Text, Union[int, float]]:
-        stat_info = self.stat(follow_symlinks=follow_symlinks)
+    def stat(self) -> Dict[Text, Union[int, float]]:
+        stat_info = self._path.stat()
         stat_dict = {
             "st_mode": stat_info.st_mode,
             "st_ino": stat_info.st_ino,
