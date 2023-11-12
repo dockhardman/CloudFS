@@ -182,12 +182,16 @@ class LocalPath(Path):
     def rmdir(self) -> None:
         self._path.rmdir()
 
-    def rename(self, target) -> "LocalPath":
-        target_path = self._path.rename(target)
+    def rename(self, target: Union[Text, Path]) -> "LocalPath":
+        if not isinstance(target, LocalPath):
+            target = LocalPath(target)
+        target_path = self._path.rename(target._path)
         return LocalPath(target_path.as_uri())
 
-    def replace(self, target):
-        target_path = self._path.replace(target)
+    def replace(self, target: Union[Text, Path]) -> "LocalPath":
+        if not isinstance(target, LocalPath):
+            target = LocalPath(target)
+        target_path = self._path.replace(target._path)
         return LocalPath(target_path.as_uri())
 
     def exists(self) -> bool:

@@ -81,3 +81,24 @@ def test_local_path_basic_operations(temp_dir: "pathlib.PosixPath"):
     assert dirpath.exists()
     dirpath.rmdir()
     assert not dirpath.exists()
+
+    # test rename and replace
+    filename = "test_rename"
+    filepath = path / filename
+    filepath.touch()
+    assert filepath.exists()
+    new_filename = "test_rename_new"
+    new_filepath = path / new_filename
+    assert new_filepath == filepath.rename(new_filepath)
+    assert not filepath.exists()
+    assert new_filepath.exists()
+    new_filepath.unlink()
+    filename = "test_replace"
+    filepath = path / filename
+    filepath.touch()
+    assert filepath.exists()
+    new_filename = "test_replace_new"
+    new_filepath = path / new_filename
+    assert new_filepath == filepath.replace(new_filepath)
+    assert not filepath.exists()
+    assert new_filepath.exists()
