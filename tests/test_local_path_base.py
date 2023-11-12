@@ -67,3 +67,17 @@ def test_local_path_basic_operations(temp_dir: "pathlib.PosixPath"):
     text_filepath = path / text_filename
     assert text_filepath.write_text(data)
     assert text_filepath.read_text() == data
+
+    # test remove file and directory
+    filename = "test_remove"
+    filepath = path / filename
+    filepath.touch()
+    assert filepath.exists()
+    filepath.unlink()
+    assert not filepath.exists()
+    dirname = "test_remove_dir"
+    dirpath = path / dirname
+    dirpath.mkdir()
+    assert dirpath.exists()
+    dirpath.rmdir()
+    assert not dirpath.exists()
