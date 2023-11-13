@@ -1,6 +1,6 @@
 import io
 from pathlib import Path as _Path
-from typing import Dict, Generator, Optional, Text, Type, Union
+from typing import Dict, Generator, Text, Type, Union
 
 from yarl import URL
 
@@ -47,7 +47,12 @@ class Path:
         raise NotImplementedError
 
     def glob(
-        self, pattern: Text, *, case_sensitive: Optional[bool] = None
+        self,
+        pattern: Text,
+        *,
+        return_file: bool = True,
+        return_dir: bool = True,
+        **kwargs,
     ) -> Generator["Path", None, None]:
         raise NotImplementedError
 
@@ -128,9 +133,18 @@ class LocalPath(Path):
         return self._path.samefile(other_)
 
     def glob(
-        self, pattern: Text, *, case_sensitive: Optional[bool] = None
+        self,
+        pattern: Text,
+        *,
+        return_file: bool = True,
+        return_dir: bool = True,
+        **kwargs,
     ) -> Generator["LocalPath", None, None]:
-        for i in self._path.glob(pattern, case_sensitive=case_sensitive):
+        for i in self._path.glob(pattern):
+            if not return_file and i.is_file():
+                continue
+            if not return_dir and i.is_dir():
+                continue
             yield LocalPath(i.as_uri())
 
     def stat(self) -> Dict[Text, Union[int, float]]:

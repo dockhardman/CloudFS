@@ -102,3 +102,25 @@ def test_local_path_basic_operations(temp_dir: "pathlib.PosixPath"):
     assert new_filepath == filepath.replace(new_filepath)
     assert not filepath.exists()
     assert new_filepath.exists()
+
+    # test glob
+    dirname = "test_glob"
+    dirname = path / dirname
+    dirname.mkdir()
+    for i in range(10):
+        filename = f"test_glob_{i}"
+        filepath = dirname / filename
+        filepath.touch()
+    nested_dirname = "test_glob_nested"
+    nested_dirname = dirname / nested_dirname
+    nested_dirname.mkdir()
+    for i in range(10):
+        filename = f"test_glob_nested_{i}"
+        filepath = nested_dirname / filename
+        filepath.touch()
+    assert len(list(dirname.glob("*"))) == 11
+    assert len(list(dirname.glob("test_*"))) == 11
+    assert len(list(dirname.glob("*", return_file=False))) == 1
+    assert len(list(dirname.glob("*", return_dir=False))) == 10
+    assert len(list(dirname.glob("**/*"))) == 21
+    assert len(list(dirname.glob("test_glob_nested/test_*"))) == 10
