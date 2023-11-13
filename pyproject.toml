@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cloudfs"
-version = "0.0.1"
+version = "0.1.0"
 description = "An interface to interact with cloud storage as if it's a local filesystem."
 authors = ["Allen Chou <f1470891079@gmail.com>"]
 license = "Apache License Version 2.0"
