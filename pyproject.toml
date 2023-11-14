@@ -8,7 +8,12 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0.0"
+google-cloud-storage = {version = "2.*", optional = true}
 yarl = "*"
+
+[tool.poetry.extras]
+all = ["google-cloud-storage"]
+google = ["google-cloud-storage"]
 
 
 [tool.poetry.group.dev.dependencies]
@@ -16,6 +21,7 @@ pytest = "^7.4.3"
 flake8 = "^6.1.0"
 black = "^23.10.1"
 isort = "^5.12.0"
+poetry-plugin-export = "1.*"
 
 [build-system]
 requires = ["poetry-core"]
