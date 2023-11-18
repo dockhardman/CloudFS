@@ -16,10 +16,16 @@ class Path:
             if str(path).startswith("file://"):
                 return object.__new__(LocalPath)
             elif str(path).startswith("gs://"):
+                from cloudfs.gs import GSPath
+
                 return object.__new__(GSPath)
             elif str(path).startswith("s3://"):
+                from cloudfs.s3 import S3Path
+
                 return object.__new__(S3Path)
             elif str(path).startswith("azure://"):
+                from cloudfs.azure import AzurePath
+
                 return object.__new__(AzurePath)
         return object.__new__(cls)
 
@@ -41,6 +47,9 @@ class Path:
         raise NotImplementedError
 
     def __truediv__(self, name: Text) -> "Path":
+        raise NotImplementedError
+
+    def ping(self) -> bool:
         raise NotImplementedError
 
     def samefile(self, other_path) -> bool:
@@ -125,6 +134,9 @@ class LocalPath(Path):
     @property
     def _path(self) -> _Path:
         return _Path((self._url.host or "") + (self._url.path or ""))
+
+    def ping(self) -> bool:
+        return True
 
     def samefile(self, other_path: "LocalPath") -> bool:
         if not isinstance(other_path, LocalPath):
@@ -216,15 +228,3 @@ class LocalPath(Path):
 
     def is_file(self) -> bool:
         return self._path.is_file()
-
-
-class GSPath(Path):
-    pass
-
-
-class S3Path(Path):
-    pass
-
-
-class AzurePath(Path):
-    pass
