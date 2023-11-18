@@ -49,6 +49,9 @@ class Path:
     def __truediv__(self, name: Text) -> "Path":
         raise NotImplementedError
 
+    def ping(self) -> bool:
+        raise NotImplementedError
+
     def samefile(self, other_path) -> bool:
         raise NotImplementedError
 
@@ -131,6 +134,9 @@ class LocalPath(Path):
     @property
     def _path(self) -> _Path:
         return _Path((self._url.host or "") + (self._url.path or ""))
+
+    def ping(self) -> bool:
+        return True
 
     def samefile(self, other_path: "LocalPath") -> bool:
         if not isinstance(other_path, LocalPath):

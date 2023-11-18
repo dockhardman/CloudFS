@@ -38,7 +38,7 @@ class GSPath(Path):
 
         if self._url.scheme != "gs":
             raise ValueError(f"Unsupported scheme: gs, got {self._url.scheme}")
-        if not self._url.host:
+        if not self.bucket_name:
             raise ValueError(f"Missing bucket name in {self._url}")
 
         if isinstance(credentials, Text):
@@ -79,6 +79,9 @@ class GSPath(Path):
 
     def __truediv__(self, name: Text) -> "Path":
         raise NotImplementedError
+
+    def ping(self) -> bool:
+        return self.bucket.exists()
 
     def samefile(self, other_path) -> bool:
         raise NotImplementedError
