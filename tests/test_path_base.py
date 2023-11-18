@@ -1,4 +1,5 @@
-from cloudfs.base import GSPath, LocalPath, Path
+from cloudfs.base import LocalPath, Path
+from cloudfs.gs import GSPath
 
 
 def test_path_initiation():
