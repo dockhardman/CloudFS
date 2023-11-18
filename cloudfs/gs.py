@@ -42,19 +42,26 @@ class GSPath(Path):
             raise ValueError(f"Missing bucket name in {self._url}")
 
         if isinstance(credentials, Text):
-            credentials = service_account.from_service_account_info(
+            credentials = service_account.Credentials.from_service_account_info(
                 json.loads(credentials)
             )
         elif isinstance(credentials, Dict):
-            credentials = service_account.from_service_account_info(credentials)
+            credentials = service_account.Credentials.from_service_account_info(
+                credentials
+            )
         elif not credentials and credentials_path:
             credentials = service_account.Credentials.from_service_account_file(
                 credentials_path
             )
         elif not credentials and "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-            credentials = service_account.Credentials.from_service_account_file(
-                os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-            )
+            if os.environ["GOOGLE_APPLICATION_CREDENTIALS"].endswith(".json"):
+                credentials = service_account.Credentials.from_service_account_file(
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+                )
+            else:
+                credentials = service_account.Credentials.from_service_account_info(
+                    json.loads(os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
+                )
 
         self._storage_client = storage.Client(credentials=credentials)
 
