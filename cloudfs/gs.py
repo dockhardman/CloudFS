@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import os
@@ -65,17 +66,25 @@ class GSPath(Path):
     def blob_name(self) -> Text:
         return self._url.path.lstrip("/")
 
-    def __eq__(self, other_path: "Path") -> bool:
-        raise NotImplementedError
+    def __eq__(self, other_path: "GSPath") -> bool:
+        if not isinstance(other_path, GSPath):
+            return False
+        return self._url == other_path._url
 
     def __truediv__(self, name: Text) -> "Path":
-        raise NotImplementedError
+        if not isinstance(name, Text):
+            raise ValueError(f"Expected str, got {type(name)}")
+        return GSPath(self._url / name, storage_client=self._storage_client)
 
     def ping(self) -> bool:
         return self.bucket.exists()
 
-    def samefile(self, other_path) -> bool:
-        raise NotImplementedError
+    def samefile(self, other_path: Union[Text, "GSPath"]) -> bool:
+        if isinstance(other_path, Text):
+            other_path = GSPath(other_path, storage_client=self._storage_client)
+        if not isinstance(other_path, GSPath):
+            return False
+        return self.md5() == other_path.md5()
 
     def glob(
         self,
@@ -137,6 +146,12 @@ class GSPath(Path):
 
     def is_file(self) -> bool:
         raise NotImplementedError
+
+    def md5(self) -> Text:
+        blob = self.blob
+        blob.reload(client=self._storage_client)
+        md5_hash_base64 = blob.md5_hash
+        return base64.b64decode(md5_hash_base64).hex()
 
     def _init_client(
         self,
