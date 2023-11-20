@@ -1,10 +1,11 @@
 import base64
+import fnmatch
 import io
 import json
 import os
 import warnings
 from pathlib import Path as _Path
-from typing import Dict, Generator, Optional, Text, Union
+from typing import Dict, Generator, Optional, Set, Text, Union
 
 from yarl import URL
 
@@ -51,6 +52,10 @@ class GSPath(Path):
         )
 
     @property
+    def client(self) -> "Client":
+        return self._storage_client
+
+    @property
     def bucket(self) -> "Bucket":
         return self._storage_client.bucket(self.bucket_name)
 
@@ -74,14 +79,14 @@ class GSPath(Path):
     def __truediv__(self, name: Text) -> "Path":
         if not isinstance(name, Text):
             raise ValueError(f"Expected str, got {type(name)}")
-        return GSPath(self._url / name, storage_client=self._storage_client)
+        return GSPath(self._url / name, storage_client=self.client)
 
     def ping(self) -> bool:
         return self.bucket.exists()
 
     def samefile(self, other_path: Union[Text, "GSPath"]) -> bool:
         if isinstance(other_path, Text):
-            other_path = GSPath(other_path, storage_client=self._storage_client)
+            other_path = GSPath(other_path, storage_client=self.client)
         if not isinstance(other_path, GSPath):
             return False
         return self.md5() == other_path.md5()
@@ -93,8 +98,20 @@ class GSPath(Path):
         return_file: bool = True,
         return_dir: bool = True,
         **kwargs,
-    ) -> Generator["Path", None, None]:
-        raise NotImplementedError
+    ) -> Generator["GSPath", None, None]:
+        prefix = pattern.split("*")[0]
+        blobs = self.client.list_blobs(self.bucket_name, prefix=prefix, delimiter="/")
+
+        paths: Set[Text] = set()
+
+        for page in blobs.pages:
+            if page.prefixes and return_dir:
+                matched_dirs = {d for d in page.prefixes if fnmatch.fnmatch(d, pattern)}
+                paths.update(matched_dirs)
+            for blob in page:
+                if return_file and fnmatch.fnmatch(blob.name, pattern):
+                    paths.add(blob.name)
+        return [GSPath(p, storage_client=self.client) for p in sorted(list(paths))]
 
     def stat(self) -> Dict[Text, Union[int, float]]:
         raise NotImplementedError
