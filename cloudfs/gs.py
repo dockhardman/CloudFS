@@ -11,9 +11,9 @@ from cloudfs.base import Path
 
 try:
     from google.auth.credentials import Credentials
-    from google.cloud import storage
     from google.cloud.storage.blob import Blob
     from google.cloud.storage.bucket import Bucket
+    from google.cloud.storage.client import Client
     from google.oauth2 import service_account
 
     service_account
@@ -30,6 +30,7 @@ class GSPath(Path):
         self,
         path: Union[Text, URL],
         *,
+        storage_client: Optional["Client"] = None,
         credentials: Optional[Union["Credentials", Text, Dict]] = None,
         credentials_path: Optional[Union[Text, _Path]] = None,
         **kwargs,
@@ -41,29 +42,12 @@ class GSPath(Path):
         if not self.bucket_name:
             raise ValueError(f"Missing bucket name in {self._url}")
 
-        if isinstance(credentials, Text):
-            credentials = service_account.Credentials.from_service_account_info(
-                json.loads(credentials)
-            )
-        elif isinstance(credentials, Dict):
-            credentials = service_account.Credentials.from_service_account_info(
-                credentials
-            )
-        elif not credentials and credentials_path:
-            credentials = service_account.Credentials.from_service_account_file(
-                credentials_path
-            )
-        elif not credentials and "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-            if os.environ["GOOGLE_APPLICATION_CREDENTIALS"].endswith(".json"):
-                credentials = service_account.Credentials.from_service_account_file(
-                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-                )
-            else:
-                credentials = service_account.Credentials.from_service_account_info(
-                    json.loads(os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
-                )
-
-        self._storage_client = storage.Client(credentials=credentials)
+        self._storage_client = self._init_client(
+            storage_client=storage_client,
+            credentials=credentials,
+            credentials_path=credentials_path,
+            **kwargs,
+        )
 
     @property
     def bucket(self) -> "Bucket":
@@ -153,3 +137,37 @@ class GSPath(Path):
 
     def is_file(self) -> bool:
         raise NotImplementedError
+
+    def _init_client(
+        self,
+        storage_client: Optional["Client"] = None,
+        credentials: Optional[Union["Credentials", Text, Dict]] = None,
+        credentials_path: Optional[Union[Text, _Path]] = None,
+        **kwargs,
+    ) -> "Client":
+        if isinstance(storage_client, Client):
+            return storage_client
+
+        if isinstance(credentials, Text):
+            credentials = service_account.Credentials.from_service_account_info(
+                json.loads(credentials)
+            )
+        elif isinstance(credentials, Dict):
+            credentials = service_account.Credentials.from_service_account_info(
+                credentials
+            )
+        elif not credentials and credentials_path:
+            credentials = service_account.Credentials.from_service_account_file(
+                credentials_path
+            )
+        elif not credentials and "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+            if os.environ["GOOGLE_APPLICATION_CREDENTIALS"].endswith(".json"):
+                credentials = service_account.Credentials.from_service_account_file(
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+                )
+            else:
+                credentials = service_account.Credentials.from_service_account_info(
+                    json.loads(os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
+                )
+
+        return Client(credentials=credentials)
