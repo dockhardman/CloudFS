@@ -26,6 +26,8 @@ except ImportError:
     )
     storage = None
 
+EMPTY_FILENAME = "__empty__"
+
 
 class GSPath(Path):
     def __init__(
@@ -99,6 +101,11 @@ class GSPath(Path):
         return_dir: bool = True,
         **kwargs,
     ) -> Generator["GSPath", None, None]:
+        pattern = "/" + (
+            pattern.strip()
+            .lstrip(f"{self._url.scheme}://{self.bucket_name}")
+            .lstrip("/")
+        )
         prefix = pattern.split("*")[0]
         blobs = self.client.list_blobs(self.bucket_name, prefix=prefix, delimiter="/")
 
@@ -107,41 +114,80 @@ class GSPath(Path):
         for page in blobs.pages:
             if page.prefixes and return_dir:
                 matched_dirs = {d for d in page.prefixes if fnmatch.fnmatch(d, pattern)}
-                paths.update(matched_dirs)
+                for matched_dir in matched_dirs:
+                    if matched_dir in paths:
+                        continue
+                    paths.add(matched_dir)
+                    yield GSPath(
+                        self._url.with_path(matched_dir.strip(" /") + "/"),
+                        storage_client=self.client,
+                    )
             for blob in page:
                 if return_file and fnmatch.fnmatch(blob.name, pattern):
+                    if blob.name in paths:
+                        continue
                     paths.add(blob.name)
-        return [GSPath(p, storage_client=self.client) for p in sorted(list(paths))]
+                    yield GSPath(
+                        self._url.with_path(matched_dir.strip(" /") + "/"),
+                        storage_client=self.client,
+                    )
 
     def stat(self) -> Dict[Text, Union[int, float]]:
-        raise NotImplementedError
+        blob = self.blob
+        blob.reload(client=self.client)
+        return {
+            "size": blob.size,
+            "mtime": blob.updated.timestamp(),
+            "ctime": blob.time_created.timestamp(),
+        }
 
     def owner(self) -> Text:
-        raise NotImplementedError
+        blob = self.blob
+        blob.reload(client=self.client)
+        return blob.owner
 
     def group(self) -> Text:
-        raise NotImplementedError
+        blob = self.blob
+        blob.reload(client=self.client)
+        return blob.owner
 
     def open(self, **kwargs) -> io.IOBase:
         raise NotImplementedError
 
     def read_bytes(self) -> bytes:
-        raise NotImplementedError
+        return self.blob.download_as_bytes(client=self.client)
 
     def read_text(self, encoding=None, errors=None) -> Text:
-        raise NotImplementedError
+        return self.blob.download_as_text(client=self.client)
 
-    def write_bytes(self, data) -> int:
-        raise NotImplementedError
+    def write_bytes(self, data: bytes) -> int:
+        self.blob.upload_from_string(data, client=self.client)
+        return len(data)
 
     def write_text(self, data, encoding=None, errors=None) -> int:
+        self.blob.upload_from_string(data, client=self.client)
+        return len(data)
+
+    def touch(self, mode=None, exist_ok=True) -> None:
         raise NotImplementedError
 
-    def touch(self, mode=438, exist_ok=True) -> None:
-        raise NotImplementedError
+    def mkdir(self, mode=None, parents: bool = False, exist_ok: bool = False) -> None:
+        if not self._url.path.endswith("/"):
+            path = GSPath(
+                self._url.with_path(self._url.path + "/"), storage_client=self.client
+            )
+        else:
+            path = self
 
-    def mkdir(self, mode=511, parents=False, exist_ok=False) -> None:
-        raise NotImplementedError
+        if path.is_dir():
+            if not exist_ok:
+                raise FileExistsError(f"Directory already exists: {path}")
+            return
+        else:
+            (path / EMPTY_FILENAME).touch()
+
+        # Create directory
+        self.bucket.blob(self.blob_name + "/").upload_from_string("")
 
     def unlink(self, missing_ok=False) -> None:
         raise NotImplementedError
@@ -156,13 +202,23 @@ class GSPath(Path):
         raise NotImplementedError
 
     def exists(self) -> bool:
-        raise NotImplementedError
+        if self._url.path.endswith("/"):
+            return self.is_dir()
+        return self.is_file()
 
     def is_dir(self) -> bool:
-        raise NotImplementedError
+        if not self._url.path.endswith("/"):
+            return False
+        for _ in self.glob(self._url.path, return_file=True, return_dir=True):
+            return True
+        return False
 
     def is_file(self) -> bool:
-        raise NotImplementedError
+        if self._url.path.endswith("/"):
+            return False
+        for _ in self.glob(self._url.path, return_file=True, return_dir=False):
+            return True
+        return False
 
     def md5(self) -> Text:
         blob = self.blob
