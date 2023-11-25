@@ -190,10 +190,26 @@ class GSPath(Path):
         self.bucket.blob(self.blob_name + "/").upload_from_string("")
 
     def unlink(self, missing_ok=False) -> None:
-        raise NotImplementedError
+        blob = self.blob
+        try:
+            blob.reload(client=self.client)
+        except Exception:
+            if missing_ok:
+                return
+            raise FileNotFoundError(f"No such file or directory: {self}")
+        if blob.name.endswith("/"):
+            raise IsADirectoryError(f"Is a directory: {self}")
+        self.blob.delete(client=self.client)
 
     def rmdir(self) -> None:
-        raise NotImplementedError
+        blob = self.blob
+        try:
+            blob.reload(client=self.client)
+        except Exception:
+            raise FileNotFoundError(f"No such file or directory: {self}")
+        if not blob.name.endswith("/"):
+            raise NotADirectoryError(f"Not a directory: {self}")
+        self.blob.delete(client=self.client)
 
     def rename(self, target) -> "Path":
         raise NotImplementedError
