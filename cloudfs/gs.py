@@ -209,14 +209,21 @@ class GSPath(Path):
         self.blob.delete(client=self.client)
 
     def rmdir(self) -> None:
-        blob = self.blob
-        try:
-            blob.reload(client=self.client)
-        except Exception:
+        path = self
+        if not path.is_dir():
             raise FileNotFoundError(f"No such file or directory: {self}")
-        if not blob.name.endswith("/"):
-            raise NotADirectoryError(f"Not a directory: {self}")
-        self.blob.delete(client=self.client)
+
+        path_empty: Optional["GSPath"] = None
+        for inner_path in path.glob(
+            path._url.path + "*", return_file=True, return_dir=True
+        ):
+            if inner_path._url.name == path.empty_filename:
+                path_empty = inner_path
+                continue
+            raise OSError(f"Directory not empty: {self}")
+
+        if path_empty:
+            path_empty.unlink()
 
     def rename(self, target) -> "Path":
         raise NotImplementedError
@@ -230,18 +237,20 @@ class GSPath(Path):
         return self.is_file()
 
     def is_dir(self) -> bool:
-        if not self._url.path.endswith("/"):
-            return False
-        for _ in self.glob(self._url.path, return_file=True, return_dir=True):
+        if (self / self.empty_filename).is_file():
+            return True
+        pattern = self._url.path
+        if not pattern.endswith("/"):
+            pattern += "/"
+        pattern += "*"
+        for _ in self.glob(pattern, return_file=True, return_dir=True):
             return True
         return False
 
     def is_file(self) -> bool:
         if self._url.path.endswith("/"):
             return False
-        for _ in self.glob(self._url.path, return_file=True, return_dir=False):
-            return True
-        return False
+        return self.blob.exists(client=self.client)
 
     def md5(self) -> Text:
         blob = self.blob

@@ -15,7 +15,7 @@ def test_dir():
     url = f"gs://{test_bucket_name}/{test_dirname}"
     test_path = Path(url)
     yield test_path
-    # test_path.rmdir()
+    test_path.rmdir()
 
 
 def test_gs_path_basic_operations(test_dir: "GSPath"):
