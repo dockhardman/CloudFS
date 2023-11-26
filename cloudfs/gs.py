@@ -37,6 +37,7 @@ class GSPath(Path):
         storage_client: Optional["Client"] = None,
         credentials: Optional[Union["Credentials", Text, Dict]] = None,
         credentials_path: Optional[Union[Text, _Path]] = None,
+        empty_filename: Text = EMPTY_FILENAME,
         **kwargs,
     ):
         super().__init__(path, **kwargs)
@@ -52,6 +53,8 @@ class GSPath(Path):
             credentials_path=credentials_path,
             **kwargs,
         )
+
+        self.empty_filename = empty_filename
 
     @property
     def client(self) -> "Client":
@@ -169,7 +172,14 @@ class GSPath(Path):
         return len(data)
 
     def touch(self, mode=None, exist_ok=True) -> None:
-        raise NotImplementedError
+        if self._url.path.endswith("/"):
+            raise IsADirectoryError(f"Is a directory: {self}")
+        if self.is_file():
+            if not exist_ok:
+                raise FileExistsError(f"File already exists: {self}")
+            return
+        else:
+            self.blob.upload_from_string(b"", client=self.client)
 
     def mkdir(self, mode=None, parents: bool = False, exist_ok: bool = False) -> None:
         if not self._url.path.endswith("/"):
@@ -184,10 +194,7 @@ class GSPath(Path):
                 raise FileExistsError(f"Directory already exists: {path}")
             return
         else:
-            (path / EMPTY_FILENAME).touch()
-
-        # Create directory
-        self.bucket.blob(self.blob_name + "/").upload_from_string("")
+            (path / self.empty_filename).touch()
 
     def unlink(self, missing_ok=False) -> None:
         blob = self.blob
