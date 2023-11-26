@@ -37,6 +37,7 @@ class GSPath(Path):
         storage_client: Optional["Client"] = None,
         credentials: Optional[Union["Credentials", Text, Dict]] = None,
         credentials_path: Optional[Union[Text, _Path]] = None,
+        empty_filename: Text = EMPTY_FILENAME,
         **kwargs,
     ):
         super().__init__(path, **kwargs)
@@ -52,6 +53,8 @@ class GSPath(Path):
             credentials_path=credentials_path,
             **kwargs,
         )
+
+        self.empty_filename = empty_filename
 
     @property
     def client(self) -> "Client":
@@ -169,7 +172,14 @@ class GSPath(Path):
         return len(data)
 
     def touch(self, mode=None, exist_ok=True) -> None:
-        raise NotImplementedError
+        if self._url.path.endswith("/"):
+            raise IsADirectoryError(f"Is a directory: {self}")
+        if self.is_file():
+            if not exist_ok:
+                raise FileExistsError(f"File already exists: {self}")
+            return
+        else:
+            self.blob.upload_from_string(b"", client=self.client)
 
     def mkdir(self, mode=None, parents: bool = False, exist_ok: bool = False) -> None:
         if not self._url.path.endswith("/"):
@@ -184,10 +194,7 @@ class GSPath(Path):
                 raise FileExistsError(f"Directory already exists: {path}")
             return
         else:
-            (path / EMPTY_FILENAME).touch()
-
-        # Create directory
-        self.bucket.blob(self.blob_name + "/").upload_from_string("")
+            (path / self.empty_filename).touch()
 
     def unlink(self, missing_ok=False) -> None:
         blob = self.blob
@@ -202,14 +209,21 @@ class GSPath(Path):
         self.blob.delete(client=self.client)
 
     def rmdir(self) -> None:
-        blob = self.blob
-        try:
-            blob.reload(client=self.client)
-        except Exception:
+        path = self
+        if not path.is_dir():
             raise FileNotFoundError(f"No such file or directory: {self}")
-        if not blob.name.endswith("/"):
-            raise NotADirectoryError(f"Not a directory: {self}")
-        self.blob.delete(client=self.client)
+
+        path_empty: Optional["GSPath"] = None
+        for inner_path in path.glob(
+            path._url.path + "*", return_file=True, return_dir=True
+        ):
+            if inner_path._url.name == path.empty_filename:
+                path_empty = inner_path
+                continue
+            raise OSError(f"Directory not empty: {self}")
+
+        if path_empty:
+            path_empty.unlink()
 
     def rename(self, target) -> "Path":
         raise NotImplementedError
@@ -223,18 +237,20 @@ class GSPath(Path):
         return self.is_file()
 
     def is_dir(self) -> bool:
-        if not self._url.path.endswith("/"):
-            return False
-        for _ in self.glob(self._url.path, return_file=True, return_dir=True):
+        if (self / self.empty_filename).is_file():
+            return True
+        pattern = self._url.path
+        if not pattern.endswith("/"):
+            pattern += "/"
+        pattern += "*"
+        for _ in self.glob(pattern, return_file=True, return_dir=True):
             return True
         return False
 
     def is_file(self) -> bool:
         if self._url.path.endswith("/"):
             return False
-        for _ in self.glob(self._url.path, return_file=True, return_dir=False):
-            return True
-        return False
+        return self.blob.exists(client=self.client)
 
     def md5(self) -> Text:
         blob = self.blob
